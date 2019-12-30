@@ -1,2 +1,2 @@
 # BayesianPOSTagger
-A Bayesian POS Tagger in Common Lisp
+A Bayesian POS Tagger in Perl 5
