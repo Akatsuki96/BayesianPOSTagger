@@ -17,6 +17,11 @@ my ($low,$high)=(0.7,0.8);
 $sample=Sampler::uniform_sampling($low,$high);
 print("[--] Uniform($low,$high) => Sample: $sample\n");
 
+# Uniform Integer Sampling
+my ($low,$high)=(0,10);
+$sample=Sampler::uniform_integer_sampling($low,$high);
+print("[--] UniformInteger($low,$high) => Sample: $sample\n");
+
 #Gaussian Sampling
 my ($mean,$std)=(5,0.5);
 $sample=Sampler::gaussian_sampling($mean,$std);
@@ -28,6 +33,6 @@ $sample=Sampler::gamma_sampling($scale,$order);
 print("[--] Gamma($scale,$order) => Sample: $sample\n");
 
 #Beta Sampling
-my ($alpha,$beta)=(2,5);
+my ($alpha,$beta)=(3,5);
 $sample=Sampler::beta_sampling($alpha,$beta);
 print("[--] Beta($alpha,$beta) => Sample: $sample\n");
