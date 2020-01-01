@@ -18,7 +18,7 @@ $sample=Sampler::uniform_sampling($low,$high);
 print("[--] Uniform($low,$high) => Sample: $sample\n");
 
 # Uniform Integer Sampling
-my ($low,$high)=(0,10);
+($low,$high)=(0,10);
 $sample=Sampler::uniform_integer_sampling($low,$high);
 print("[--] UniformInteger($low,$high) => Sample: $sample\n");
 
