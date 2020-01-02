@@ -10,7 +10,6 @@ sub new{
   },$class;
   my @words=split (" ",$str);
   $self->{words}=\@words;
-  #print $_." " for @{$self->{words}};
   $self->{actual_word}=0;
   return $self;
 }
