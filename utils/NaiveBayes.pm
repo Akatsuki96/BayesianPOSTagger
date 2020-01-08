@@ -7,7 +7,6 @@ use Sampler;
 sub new{
   my $class = shift;
   my $self = bless {
-    class_prob =>{}, # {class : probability}
     words =>{},
     classes => {},
     num_classes => 0
@@ -67,13 +66,13 @@ sub tag_file{
 }
 
 sub tag{
-  my ($class,$row) = (shift,shift);
+  my ($class,$row,$punc) = (shift,shift,shift);
   my @tagged_words;
   my @best_tags;
   my $max_prob;
   my %posteriors;
   chomp $row;
-  $row=~s/[[:punct:]]//g;
+  $row=~s/[[:punct:]]//g if(defined($punc));
   my @words=split ' ',$row;
   for my $word (@words){
     $word = lc $word;
