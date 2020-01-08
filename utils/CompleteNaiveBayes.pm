@@ -15,7 +15,8 @@ sub new{
     prev_words => {}, # act -> prev
     next_words =>{}, # act -> next
     classes => {},
-    triplets => {},
+    prev_class =>{},
+    next_class => {},
     num_classes => 0
   },$class;
   return $self;
@@ -94,6 +95,25 @@ sub add_pos{
   }
 }
 
+sub add_prev_pos{
+  my ($class,$pos,$prev_pos)=(shift,shift,shift);
+  if(defined($class->{prev_class}{$pos}{$prev_pos})){
+    $class->{prev_class}{$pos}{$prev_pos}+=1;
+  }else{
+    $class->{prev_class}{$pos}{$prev_pos}=1;
+  }
+}
+
+
+sub add_next_pos{
+  my ($class,$pos,$next_pos)=(shift,shift,shift);
+  if(defined($class->{next_class}{$pos}{$next_pos})){
+    $class->{next_class}{$pos}{$next_pos}+=1;
+  }else{
+    $class->{next_class}{$pos}{$next_pos}=1;
+  }
+}
+
 sub train{
   my ($class,$samples,$ttable) = (shift,shift,shift);
   my @samples = @$samples;
@@ -103,13 +123,7 @@ sub train{
     my ($prev_word,$prev_pos)=($samples[$i_sample-1]->get_word(),$samples[$i_sample-1]->get_pos());
     my ($word,$pos) = ($samples[$i_sample]->get_word(),$samples[$i_sample]->get_pos());
     my ($next_word,$next_pos)=($samples[$i_sample+1]->get_word(),$samples[$i_sample+1]->get_pos());
-    my $triplet = new TagTriplet($prev_pos,$pos,$next_pos);
     my $tagged_word;
-    if(defined($class->{triplets}{$triplet})){
-      $class->{triplets}{$triplet}+=1;
-    }else{
-      $class->{triplets}{$triplet}=1;
-    }
 
     $tagged_word = $word."[$pos]";
     $prev_word = $prev_word."[$prev_pos]";
@@ -122,6 +136,8 @@ sub train{
     $class->add_prev($tagged_word,$prev_word);
     $class->add_next($tagged_word,$next_word);
     $class->add_pos($pos);
+    $class->add_prev_pos($pos,$prev_pos);
+    $class->add_next_pos($pos,$next_pos);
     $class->{num_classes}+=1;
   }
 }
@@ -142,9 +158,6 @@ sub get_word_tag_occurency{
 
 sub get_prev_intersect{
   my ($class,$wtag_act,$wtag_prev)=(shift,shift,shift);
-  if(defined($class->{prev_words}{$wtag_act}{$wtag_prev})){
-    print("NUM: ".$class->{prev_words}{$wtag_act}{$wtag_prev}."\n");
-  }
   return defined($class->{prev_words}{$wtag_act}{$wtag_prev})?$class->{prev_words}{$wtag_act}{$wtag_prev}:0;
 }
 
@@ -161,7 +174,7 @@ sub is_known{
 
 sub get_log{
   my $val=shift;
-  return $val != 0?log($val):-9;
+  return (defined($val) and $val != 0)?log($val)/log(2):-9;
 }
 
 sub tag{
@@ -185,27 +198,33 @@ sub tag{
 
     for my $tag (@tags){
       $likelihood =0;
+      #my $tag_prob = log($class->{classes}{$tag}/$class->get_num_classes());
       my $tagged_word = $word."[$tag]";
-      my $occurrency_word_tag = $class->get_word_tag_occurency($word."[$tag]");
-      next if($occurrency_word_tag==0);
-      $prior = $class->is_known($word)?get_log($occurrency_word_tag/$class->{words}{$word}):log(1/$class->{num_classes});
-      #$prior = $class->is_known($word)?$occurrency_word_tag/$class->{words}{$word}:1/$class->{num_classes};
-
-      #DEBUG
-      print("[--] I: $i Word: $word Tag: $tag Prior: $prior\n");
-      for my $other_tag (@tags){
-        my $tagged_next = $next."[$other_tag]";
-        my $tagged_prev = $prev."[$other_tag]";
-        if(defined($prev) and not defined($next)){
-          $likelihood += get_log($class->get_prev_intersect($word."[$tag]",$prev."[$other_tag]")/$occurrency_word_tag);
-        }elsif(defined($next) and not defined($prev)){
-          $likelihood +=
-            get_log($class->get_prev_intersect($word."[$tag]",$next."[$other_tag]")/$occurrency_word_tag);
+      if($class->is_known($word)){
+        my $occurrency_word_tag = $class->get_word_tag_occurency($word."[$tag]");
+        next if($occurrency_word_tag==0);
+        if($class->is_known($word)){
+          $prior = get_log($occurrency_word_tag/$class->{words}{$word});
         }else{
-          $likelihood +=
-            get_log($class->get_prev_intersect($tagged_word,$tagged_prev)/$occurrency_word_tag)+
-            get_log($class->get_next_intersect($tagged_word,$tagged_next)/$occurrency_word_tag);
+
         }
+        print("[--] I: $i Word: $word Tag: $tag Prior: $prior\n");
+        for my $other_tag (@tags){
+          my $tagged_next = $next."[$other_tag]";
+          my $tagged_prev = $prev."[$other_tag]";
+          if(defined($prev) and not defined($next)){
+            $likelihood += get_log($class->get_prev_intersect($tagged_word,$tagged_prev)/$occurrency_word_tag);
+          }elsif(defined($next) and not defined($prev)){
+            $likelihood +=
+              get_log($class->get_prev_intersect($tagged_word,$tagged_next)/$occurrency_word_tag);
+          }else{
+            $likelihood +=
+              get_log($class->get_prev_intersect($tagged_word,$tagged_prev)/$occurrency_word_tag)+
+              get_log($class->get_next_intersect($tagged_word,$tagged_next)/$occurrency_word_tag);
+          }
+        }
+      }else{
+        $prior = get_log($class->{classes}{$tag}/$class->get_num_classes());
       }
       #DEBUG
       $post = $prior+$likelihood;

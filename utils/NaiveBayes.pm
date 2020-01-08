@@ -66,18 +66,18 @@ sub tag_file{
 }
 
 sub tag{
-  my ($class,$row,$punc) = (shift,shift,shift);
+  my ($class,$row) = (shift,shift);
   my @tagged_words;
   my @best_tags;
   my $max_prob;
   my %posteriors;
   chomp $row;
-  $row=~s/[[:punct:]]//g if(defined($punc));
+#  $row=~s/[[:punct:]]//g if(defined($punc));
   my @words=split ' ',$row;
   for my $word (@words){
     $word = lc $word;
     $max_prob = 0;
-    push @best_tags,"NOUN";
+    push @best_tags,"unk";
     my %classes = %{$class->{classes}};
     for my $tag (keys %classes){
       my $cls_prior = $classes{$tag}/$class->get_num_classes();
