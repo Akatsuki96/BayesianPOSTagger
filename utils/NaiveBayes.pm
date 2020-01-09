@@ -73,21 +73,6 @@ sub train{
   $class->update_model(0,$_,$class->{num_classes}) for (keys %{$class->{classes}});
 }
 
-sub tag_file{
-  my ($class,$to_tag,$output) = (shift,shift,shift);
-  my ($f_hand,$f_out);
-  open($f_hand,'<:encoding(UTF-8)',$to_tag) or die("[xx] Error: Couldn't open the file '$to_tag'!");
-  open($f_out,'>:encoding(UTF-8)',$output) or $f_out=STDOUT;
-  while($row = <$f_hand>){
-    my @tagged_words = $class->tag($row);
-    for my $tword (@tagged_words){
-      print $f_out ($tword->get_word()."[".$tword->get_pos()."]"." ");
-    }
-    print $f_out ("\n");
-  }
-  close($f_hand);
-  close($f_out) unless($f_out == STDOUT);
-}
 
 sub tag{
   my ($class,$row) = (shift,shift);

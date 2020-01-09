@@ -3,9 +3,9 @@ package CompleteNaiveBayes;
 use strict;
 use warnings;
 use lib './';
+use Switch;
 use Functions;
 use Sampler;
-use TagTriplet;
 
 sub new{
   my $class = shift;
@@ -15,8 +15,10 @@ sub new{
     prev_words => {}, # act -> prev
     next_words =>{}, # act -> next
     classes => {},
-    prev_class =>{},
-    next_class => {},
+    wtag_prog =>{},
+    prev_wtag_prob => {},
+    next_wtag_prob => {},
+    tag_prob =>{},
     num_classes => 0
   },$class;
   return $self;
@@ -27,26 +29,6 @@ sub class_contained{
   return defined($class->{classes}{$tag});
 }
 
-sub triplet_defined{
-  my ($class,$triplet)=(shift,shift);
-  for (keys %{$class->{triplets}}){
-    return 1 if($_->triplet_equal($triplet));
-  }
-  return 0;
-}
-
-sub get_most_probable_by{
-  my ($class,$prev,$act,$next) = (shift,shift,shift);
-  my ($trip,$max)=(0,0);
-  for (keys %{$class->{triplets}}){
-    if((not defined($prev) or $_->TagTriplet::has_prev($prev)) and (not defined($act) or $_->TagTriplet::has_act($act)) and (not defined($act) or $_->TagTriplet::has_next($next)) and $class->{triplets}{$_} > $max){
-      $trip = $_;
-      $max = $class->{triplets}{$_};
-    }
-  }
-  return $trip;
-}
-
 sub add_word{
   my $class = shift;
   my $word = shift;
@@ -54,16 +36,6 @@ sub add_word{
     $class->{words}{$word}+=1;
   }else{
     $class->{words}{$word}=1;
-  }
-}
-
-sub add_tagged_word{
-  my $class = shift;
-  my $word = shift;
-  if(defined($class->{tagged_words}{$word})){
-    $class->{tagged_words}{$word}+=1;
-  }else{
-    $class->{tagged_words}{$word}=1;
   }
 }
 
@@ -95,50 +67,46 @@ sub add_pos{
   }
 }
 
-sub add_prev_pos{
-  my ($class,$pos,$prev_pos)=(shift,shift,shift);
-  if(defined($class->{prev_class}{$pos}{$prev_pos})){
-    $class->{prev_class}{$pos}{$prev_pos}+=1;
-  }else{
-    $class->{prev_class}{$pos}{$prev_pos}=1;
-  }
+
+sub get_tag_from_tagged{
+  my ($class,$tagged)=(shift,shift);
+  my @spl = split '/',$tagged;
+  return $spl[1];
 }
 
-
-sub add_next_pos{
-  my ($class,$pos,$next_pos)=(shift,shift,shift);
-  if(defined($class->{next_class}{$pos}{$next_pos})){
-    $class->{next_class}{$pos}{$next_pos}+=1;
-  }else{
-    $class->{next_class}{$pos}{$next_pos}=1;
+sub update_model{
+  my ($class,$model,$wtag,$prevnext,$tot) = (shift,shift,shift,shift,shift);
+  switch($model){
+    case 1 {$class->{wtag_prob}{$wtag}=$class->{words}{$wtag}/$tot; }
+    case 2 {$class->{prev_wtag_prob}{$wtag}{$prevnext}=$class->{prev_words}{$wtag}{$prevnext}; }
+    case 3 {$class->{next_wtag_prob}{$wtag}{$prevnext}=$class->{next_words}{$wtag}{$prevnext}; }
+    else { $class->{tag_prob}{$wtag}=$class->{classes}{$wtag}/$tot; }
   }
 }
 
 sub train{
-  my ($class,$samples,$ttable) = (shift,shift,shift);
+  my ($class,$samples) = (shift,shift);
   my @samples = @$samples;
   for my $i_sample (0..scalar(@samples)-1){
-    next if($i_sample == 0 || $i_sample == scalar(@samples)-1);
+    my ($prev_word,$tagged_word,$next_word);
+    $tagged_word = $samples[$i_sample]->get_word()."/".$samples[$i_sample]->get_pos();
+    $prev_word = $samples[$i_sample-1]->get_word()."/".$samples[$i_sample-1]->get_pos() unless($i_sample==0);
+    $next_word = $samples[$i_sample+1]->get_word()."/".$samples[$i_sample+1]->get_pos() unless($i_sample== scalar(@samples)-1);
 
-    my ($prev_word,$prev_pos)=($samples[$i_sample-1]->get_word(),$samples[$i_sample-1]->get_pos());
-    my ($word,$pos) = ($samples[$i_sample]->get_word(),$samples[$i_sample]->get_pos());
-    my ($next_word,$next_pos)=($samples[$i_sample+1]->get_word(),$samples[$i_sample+1]->get_pos());
-    my $tagged_word;
-
-    $tagged_word = $word."[$pos]";
-    $prev_word = $prev_word."[$prev_pos]";
-    $next_word = $next_word."[$next_pos]";
-
-    print("[!!] Adding:-> Word: $tagged_word Prev: $prev_word Next: $next_word\n");
-
-    $class->add_word($word);
-    $class->add_tagged_word($tagged_word);
-    $class->add_prev($tagged_word,$prev_word);
-    $class->add_next($tagged_word,$next_word);
-    $class->add_pos($pos);
-    $class->add_prev_pos($pos,$prev_pos);
-    $class->add_next_pos($pos,$next_pos);
+    $class->add_word($tagged_word);
+    $class->add_prev($tagged_word,$prev_word) unless($i_sample==0);
+    $class->add_next($tagged_word,$next_word) unless($i_sample==scalar(@samples)-1);
+    $class->add_pos($samples[$i_sample]->get_pos());
     $class->{num_classes}+=1;
+  }
+  $class->update_model(1,$_,0,$class->{classes}{$class->get_tag_from_tagged($_)}) for (keys %{$class->{words}});
+  for my $w (keys %{$class->{words}}){
+    for my $p (keys %{$class->{prev_words}{$w}}){
+      $class->update_model(2,$w,$p,$class->{words}{$w});
+    }
+    for my $n (keys %{$class->{next_words}{$w}}){
+      $class->update_model(3,$w,$n,$class->{words}{$w});
+    }
   }
 }
 
@@ -151,98 +119,43 @@ sub word_contained{
   return defined($class->{words}{$word});
 }
 
-sub get_word_tag_occurency{
-  my ($class,$wtag)=(shift,shift);
-  return defined($class->{tagged_words}{$wtag})?$class->{tagged_words}{$wtag}:0;
-}
-
-sub get_prev_intersect{
-  my ($class,$wtag_act,$wtag_prev)=(shift,shift,shift);
-  return defined($class->{prev_words}{$wtag_act}{$wtag_prev})?$class->{prev_words}{$wtag_act}{$wtag_prev}:0;
-}
-
-sub get_next_intersect{
-  my ($class,$wtag_act,$wtag_prev)=(shift,shift,shift);
-  return defined($class->{next_words}{$wtag_act}{$wtag_prev})?$class->{next_words}{$wtag_act}{$wtag_prev}:0;
-}
-
-
-sub is_known{
-  my ($class, $word)=(shift,shift);
-  return defined($class->{words}{$word});
-}
-
-sub get_log{
-  my $val=shift;
-  return (defined($val) and $val != 0)?log($val)/log(2):-9;
-}
-
 sub tag{
-  my ($class,$row,$punc) = (shift,shift,shift);
+  my ($class,$row) = (shift,shift);
   my @tagged_words;
-  my ($word,$prev,$next);
-  my @best_tags;
-  my $max_prob=-999999;
-  my %posteriors;
+  my ($new_tag,$max_prob);
   chomp $row;
-  #$row=~s/[[:punct:]]//g if(defined($punc));
-  my @words=split  " ",$row;
-  my ($prior,$likelihood,$post)=(0,0,0);
-
-  my @tags = keys %{$class->{classes}};
-  for my $i (0..scalar(@words)-1){
-    push @best_tags,"unk";
-    $word = $words[$i];
-    $prev = defined($words[$i-1])?$words[$i-1]:0;
-    $next = defined($words[$i+1])?$words[$i+1]:0;
-
-    for my $tag (@tags){
-      $likelihood =0;
-      #my $tag_prob = log($class->{classes}{$tag}/$class->get_num_classes());
-      my $tagged_word = $word."[$tag]";
-      if($class->is_known($word)){
-        my $occurrency_word_tag = $class->get_word_tag_occurency($word."[$tag]");
-        next if($occurrency_word_tag==0);
-        if($class->is_known($word)){
-          $prior = get_log($occurrency_word_tag/$class->{words}{$word});
-        }else{
-
+  my @words = split ' ',$row;
+  for my $word (0..scalar(@words)-1){
+    $max_prob = 0;
+    $new_tag="nn";
+    my %classes = %{$class->{classes}};
+    for my $tag (keys %classes){
+      my $tagged = $words[$word]."/".$tag;
+      next unless($class->word_contained($tagged));
+      my $prob_tagged = $class->{wtag_prob}{$tagged}; #prior
+      my $likelihood = 1;
+      my ($prev_prob,$next_prob) = (0,0);
+      print("[--] Word: ".$words[$word]." Prior: $prob_tagged\n");
+      for my $otag (keys %classes){
+        if($word > 0){
+          my $prev = $words[$word-1]."/".$otag;
+          $prev_prob = $class->{prev_wtag_prob}{$tagged}{$prev};
         }
-        print("[--] I: $i Word: $word Tag: $tag Prior: $prior\n");
-        for my $other_tag (@tags){
-          my $tagged_next = $next."[$other_tag]";
-          my $tagged_prev = $prev."[$other_tag]";
-          if(defined($prev) and not defined($next)){
-            $likelihood += get_log($class->get_prev_intersect($tagged_word,$tagged_prev)/$occurrency_word_tag);
-          }elsif(defined($next) and not defined($prev)){
-            $likelihood +=
-              get_log($class->get_prev_intersect($tagged_word,$tagged_next)/$occurrency_word_tag);
-          }else{
-            $likelihood +=
-              get_log($class->get_prev_intersect($tagged_word,$tagged_prev)/$occurrency_word_tag)+
-              get_log($class->get_next_intersect($tagged_word,$tagged_next)/$occurrency_word_tag);
-          }
+        if($word < scalar(@words)-1){
+          my $next =$words[$word+1]."/".$otag;
+          $next_prob = $class ->{next_wtag_prob}{$tagged}{$next};
         }
-      }else{
-        $prior = get_log($class->{classes}{$tag}/$class->get_num_classes());
+        $likelihood*=$prev_prob if(defined($prev_prob) and $prev_prob > 0);
+        $likelihood*=$next_prob if(defined($next_prob) and $next_prob > 0);
+        ($prev_prob,$next_prob)=(0,0);
       }
-      #DEBUG
-      $post = $prior+$likelihood;
-      print("[--] Log Likelihood: $likelihood Posterior: $post\n");
-      if($max_prob < $post){ #posterior update
+      my $post = $prob_tagged*$likelihood;
+      if($post > $max_prob){
+        $new_tag = $tag;
         $max_prob = $post;
-        @best_tags = ();
-        push @best_tags, $tag;
-      }elsif($max_prob == $post){
-        push @best_tags,$tag;
       }
     }
-    my $mag = $best_tags[Sampler::uniform_integer_sampling(0,scalar(@best_tags)-1)];
-    push @tagged_words,new Sample($word,$mag);
-    print("[--] Best tag: $mag\n");
-    @best_tags=();
-    $max_prob=-999999;
-    undef @best_tags;
+    push @tagged_words,new Sample($words[$word],$new_tag);
   }
   return @tagged_words;
 }

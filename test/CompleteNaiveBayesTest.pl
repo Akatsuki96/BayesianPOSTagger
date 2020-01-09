@@ -2,48 +2,71 @@
 
 use strict;
 use warnings;
-use Test::Simple 'no_plan';
+#use Test::Simple 'no_plan';
 use lib '../utils/';
 use Functions;
 use CompleteNaiveBayes;
 
-my @samples = Functions::read_samples('test_samples');
-my @samples2 = Functions::read_samples('test_samples2');
-my @samples3 = Functions::read_samples('brown/ca03');
-my @samples4 = Functions::read_samples('brown/ca04');
-my @samples5 = Functions::read_samples('brown/ca05');
-my @samples6 = Functions::read_samples('brown/ca06');
-my @samples7 = Functions::read_samples('brown/ca07');
-my @samples8 = Functions::read_samples('brown/ca08');
-my @samples9 = Functions::read_samples('brown/ca09');
-my @samples10 = Functions::read_samples('brown/ca10');
-my @samples11 = Functions::read_samples('brown/ca11');
-my @samples12 = Functions::read_samples('brown/ca12');
-my @samples13 = Functions::read_samples('brown/ca13');
-my @samples14 = Functions::read_samples('brown/ca14');
+sub train_ca{
+  my $naive_bayes = shift;
+  my @samples;
+  my $name;
+  for my $i (1..44){
+    if ($i<10){
+      $name = "brown/ca0$i";
+    }else{
+      $name = "brown/ca$i";
+    }
+    @samples = Functions::read_samples($name);
+    $naive_bayes->train(\@samples);
+    print("[!!] Training on '$name' completed!\n");
+  }
+}
+
+sub train_cb{
+  my $naive_bayes = shift;
+  my @samples;
+  my $name;
+  for my $i (1..27){
+    if ($i<10){
+      $name = "brown/cb0$i";
+    }else{
+      $name = "brown/cb$i";
+    }
+    @samples = Functions::read_samples($name);
+    $naive_bayes->train(\@samples);
+    print("[!!] Training on '$name' completed!\n");
+
+  }
+}
 
 
-my $cnaivebayes= new CompleteNaiveBayes();
-$cnaivebayes->train(\@samples);
-$cnaivebayes->train(\@samples2);
-$cnaivebayes->train(\@samples3);
-$cnaivebayes->train(\@samples4);
-$cnaivebayes->train(\@samples5);
-$cnaivebayes->train(\@samples6);
-$cnaivebayes->train(\@samples7);
-$cnaivebayes->train(\@samples8);
-$cnaivebayes->train(\@samples9);
-$cnaivebayes->train(\@samples10);
-$cnaivebayes->train(\@samples11);
-$cnaivebayes->train(\@samples12);
-$cnaivebayes->train(\@samples13);
-$cnaivebayes->train(\@samples14);
+sub train_cc{
+  my $naive_bayes = shift;
+  my @samples;
+  my $name;
+  for my $i (1..17){
+    if ($i<10){
+      $name = "brown/cc0$i";
+    }else{
+      $name = "brown/cc$i";
+    }
+    @samples = Functions::read_samples($name);
+    $naive_bayes->train(\@samples);
+    print("[!!] Training on '$name' completed!\n");
+  }
+}
 
+my $naive_bayes = new CompleteNaiveBayes();
 
+train_ca($naive_bayes);
+train_cb($naive_bayes);
+train_cc($naive_bayes);
 
-#my @tagged = $cnaivebayes->tag("The dog broke the bottle .");
-#print($_->get_word()."[".$_->get_pos()."] ") for(@tagged);
-my @tagged = $cnaivebayes->tag("Time flies like an arrow");
-print($_->get_word()."[".$_->get_pos()."] ") for(@tagged);
-
+my @tagged = $naive_bayes->tag("Time flies like an arrow .");
+print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
+@tagged = $naive_bayes->tag("They work at the office .");
 print("\n");
+print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
+print("\n");
+Functions::tag_file($naive_bayes,"test_set","out_test_complete");

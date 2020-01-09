@@ -1,7 +1,5 @@
 package Functions;
 
-use strict;
-use warnings;
 use lib './';
 use Sample;
 
@@ -12,7 +10,7 @@ sub read_samples{
   my $new_sample; #::Sample
   my @words; #words list of word and PoS
   open(my $f_handler, '<:encoding(UTF-8)',$file) or die("[xx] Error: Could not open the file '$file'!");
-  while(my $row = <$f_handler>){
+  while($row = <$f_handler>){
     chomp $row;
     #$row=~s/[[:punct:]]//g unless(defined($punc));
     @words = split " ",$row;
@@ -26,6 +24,22 @@ sub read_samples{
   }
   close($f_handler);
   return @samples; # return samples
+}
+
+sub tag_file{
+  my ($class,$to_tag,$output) = (shift,shift,shift);
+  my ($f_hand,$f_out);
+  open($f_hand,'<:encoding(UTF-8)',$to_tag) or die("[xx] Error: Couldn't open the file '$to_tag'!");
+  open($f_out,'>:encoding(UTF-8)',$output) or $f_out=STDOUT;
+  while($row = <$f_hand>){
+    my @tagged_words = $class->tag($row);
+    for my $tword (@tagged_words){
+      print $f_out ($tword->get_word()."[".$tword->get_pos()."]"." ");
+    }
+    print $f_out ("\n");
+  }
+  close($f_hand);
+  close($f_out) unless($f_out == STDOUT);
 }
 
 
