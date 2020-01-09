@@ -7,6 +7,7 @@ use lib '../utils/';
 use Sentence;
 use Sample;
 use TextStats;
+use TritagTable;
 
 my $sentence = new Sentence("This is a test.");
 ok($sentence->get_sentece() eq "This is a test.","get_sentence return 'This is a test.' on sentence 'This is a test.'");
@@ -24,3 +25,6 @@ my $sample = new Sample("Test","NOUN");
 ok($sample->get_word eq "Test","Sample (Test,NOUN) has the word 'Test'");
 ok($sample->get_pos eq "NOUN","Sample (Test,NOUN) has the pos 'NOUN'");
 ok($sample->is_word_equals("Test"),"The word 'Test' is represented by the sample (Test,NOUN)");
+
+# TritagTable test
+my $ttable = new TritagTable(["NOUN","ART","VERB","OTHER"]);

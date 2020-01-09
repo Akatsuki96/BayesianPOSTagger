@@ -9,9 +9,20 @@ sub new{
   my $self = bless {
     words =>{},
     classes => {},
+    word_tag_prob => {},
+    tag_prob =>{},
     num_classes => 0
   },$class;
   return $self;
+}
+
+sub update_model{
+  my ($class,$model,$wtag,$tot) = (shift,shift,shift,shift);
+  if($model){
+    $class->{word_tag_prob}{$wtag}=$class->{words}{$wtag}/$tot;
+  }else{
+    $class->{tag_prob}{$wtag}=$class->{classes}{$wtag}/$tot;
+  }
 }
 
 sub word_contained{
@@ -24,9 +35,28 @@ sub class_contained{
   return defined($class->{classes}{$tag});
 }
 
-sub get_num_classes{
-  my $class = shift;
-  return $class->{num_classes};
+sub get_tag_from_tagged{
+  my ($class,$tagged)=(shift,shift);
+  my @spl = split '/',$tagged;
+  return $spl[1];
+}
+
+sub add_word{
+  my ($class,$word)=(shift,shift);
+  if($class->word_contained($word)){
+    $class->{words}{$word}+=1;
+  }else{
+    $class->{words}{$word}=1;
+  }
+}
+
+sub add_tag{
+  my ($class,$pos)=(shift,shift);
+  if($class->class_contained($pos)){
+    $class->{classes}{$pos}+=1;
+  }else{
+    $class->{classes}{$pos}=1;
+  }
 }
 
 sub train{
@@ -34,19 +64,13 @@ sub train{
   my @samples = @$samples;
   for my $sample (@samples){
     my ($word,$pos) = ($sample->get_word(),$sample->get_pos());
-    $word = $word."[$pos]";
-    if($class->word_contained($word)){
-      $class->{words}{$word}+=1;
-    }else{
-      $class->{words}{$word}=1;
-    }
-    if($class->class_contained($pos)){
-      $class->{classes}{$pos}+=1;
-    }else{
-      $class->{classes}{$pos}=1;
-    }
+    $word = $word."/$pos";
+    $class->add_word($word);
+    $class->add_tag($pos);
     $class->{num_classes}+=1;
   }
+  $class->update_model(1,$_,$class->{classes}{$class->get_tag_from_tagged($_)}) for (keys %{$class->{words}});
+  $class->update_model(0,$_,$class->{num_classes}) for (keys %{$class->{classes}});
 }
 
 sub tag_file{
@@ -68,39 +92,24 @@ sub tag_file{
 sub tag{
   my ($class,$row) = (shift,shift);
   my @tagged_words;
-  my @best_tags;
-  my $max_prob;
-  my %posteriors;
+  my ($new_tag,$max_prob);
   chomp $row;
-#  $row=~s/[[:punct:]]//g if(defined($punc));
-  my @words=split ' ',$row;
-  for my $word (@words){
-    $word = lc $word;
+  for my $word (split ' ',$row){
     $max_prob = 0;
-    push @best_tags,"unk";
+    $new_tag="nn";
     my %classes = %{$class->{classes}};
     for my $tag (keys %classes){
-      my $cls_prior = $classes{$tag}/$class->get_num_classes();
-      my $tagged = $word."[".$tag."]";
-      if($class->word_contained($tagged)){
-        my $likelihood = $class->{words}{$tagged}/$classes{$tag};
-        my $post = $cls_prior*$likelihood;
-        if($max_prob < $post){
-          $max_prob = $post;
-          @best_tags = ();
-          push @best_tags,$tag;
-        }elsif($max_prob == $post){
-          push @best_tags,$tag;
-        }
-        $posteriors{$tagged} = $post unless(defined($posteriors{$tagged}));
-      }elsif(not defined($posteriors{$tagged})){
-        $posteriors{$tagged} = 0;
+      my $tagged = $word."/".$tag;
+      next unless($class->word_contained($tagged));
+      my $prob_tagged = $class->{word_tag_prob}{$tagged}; #likelihood
+      my $tag_prob = $class->{tag_prob}{$tag}; #prior
+      my $post = $prob_tagged*$tag_prob;
+      if($post > $max_prob){
+        $new_tag = $tag;
+        $max_prob = $post;
       }
     }
-    my $tag = $best_tags[Sampler::uniform_integer_sampling(0,scalar(@best_tags)-1)];
-    push @tagged_words,new Sample($word,$tag);
-    @best_tags=();
-    undef @best_tags;
+    push @tagged_words,new Sample($word,$new_tag);
   }
   return @tagged_words;
 }
