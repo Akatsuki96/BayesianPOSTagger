@@ -37,7 +37,7 @@ sub class_contained{
 
 sub get_tag_from_tagged{
   my ($class,$tagged)=(shift,shift);
-  my @spl = split '/',$tagged;
+  my @spl = split '_',$tagged;
   return $spl[1];
 }
 
@@ -64,7 +64,7 @@ sub train{
   my @samples = @$samples;
   for my $sample (@samples){
     my ($word,$pos) = ($sample->get_word(),$sample->get_pos());
-    $word = $word."/$pos";
+    $word = $word."_$pos";
     $class->add_word($word);
     $class->add_tag($pos);
     $class->{num_classes}+=1;
@@ -81,10 +81,10 @@ sub tag{
   chomp $row;
   for my $word (split ' ',$row){
     $max_prob = 0;
-    $new_tag="nn";
+    $new_tag="NN";
     my %classes = %{$class->{classes}};
     for my $tag (keys %classes){
-      my $tagged = $word."/".$tag;
+      my $tagged = $word."_".$tag;
       next unless($class->word_contained($tagged));
       my $prob_tagged = $class->{word_tag_prob}{$tagged}; #likelihood
       my $tag_prob = $class->{tag_prob}{$tag}; #prior

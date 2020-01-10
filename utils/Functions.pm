@@ -16,7 +16,7 @@ sub read_samples{
     #$row=~s/[[:punct:]]//g unless(defined($punc));
     @words = split " ",$row;
     for (my $i=0; $i<(scalar(@words)); $i++){
-      my @wordpos = split '/',$words[$i];
+      my @wordpos = split '_',$words[$i];
       #$words[$i] = lc $words[$i];
       #print("[".$wordpos[0]."|".$wordpos[1]."]"); #for (@wordpos);
       if($i==0){

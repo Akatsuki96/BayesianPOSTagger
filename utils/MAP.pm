@@ -118,10 +118,7 @@ sub update_model{
     case 1 {$class->{wtag_prob}{$wtag}=$class->{words}{$wtag}/$tot; }
     case 2 {$class->{prev_wtag_prob}{$wtag}{$prevnext}=$class->{prev_words}{$wtag}{$prevnext}; }
     case 3 {$class->{next_wtag_prob}{$wtag}{$prevnext}=$class->{next_words}{$wtag}{$prevnext}; }
-    case 4 {
-    #  print("WTAG: $wtag CLASSNWORD: ".$class->{first_class}{$wtag}." TOT: $tot\n");
-      $class->{first_class_prob}{$wtag}=$class->{first_class}{$wtag}/$tot;
-    }
+    case 4 {$class->{first_class_prob}{$wtag}=$class->{first_class}{$wtag}/$tot;}
     case 5 {$class->{last_class_prob}{$wtag}=$class->{last_class}{$wtag}/$tot;}
     case 6 {$class->{class_trans_prob}{$wtag}=$class->{class_transition}{$wtag}/$tot;}
     else { $class->{tag_prob}{$wtag}=$class->{classes}{$wtag}/$tot; }
@@ -221,7 +218,7 @@ sub tag{
       #return;
     }else{
       # Transition Case
-      $temp_id = -1;
+    #  $temp_id = -1;
       for my $tag (@classes){
         $max_val = 0;
         # If $act_word is a known word, we know the emission probability otherwise we can use SMALL_PROB

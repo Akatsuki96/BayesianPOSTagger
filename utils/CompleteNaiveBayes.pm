@@ -70,7 +70,7 @@ sub add_pos{
 
 sub get_tag_from_tagged{
   my ($class,$tagged)=(shift,shift);
-  my @spl = split '/',$tagged;
+  my @spl = split '_',$tagged;
   return $spl[1];
 }
 
@@ -89,9 +89,9 @@ sub train{
   my @samples = @$samples;
   for my $i_sample (0..scalar(@samples)-1){
     my ($prev_word,$tagged_word,$next_word);
-    $tagged_word = $samples[$i_sample]->get_word()."/".$samples[$i_sample]->get_pos();
-    $prev_word = $samples[$i_sample-1]->get_word()."/".$samples[$i_sample-1]->get_pos() unless($i_sample==0);
-    $next_word = $samples[$i_sample+1]->get_word()."/".$samples[$i_sample+1]->get_pos() unless($i_sample== scalar(@samples)-1);
+    $tagged_word = $samples[$i_sample]->get_word()."_".$samples[$i_sample]->get_pos();
+    $prev_word = $samples[$i_sample-1]->get_word()."_".$samples[$i_sample-1]->get_pos() unless($i_sample==0);
+    $next_word = $samples[$i_sample+1]->get_word()."_".$samples[$i_sample+1]->get_pos() unless($i_sample== scalar(@samples)-1);
 
     $class->add_word($tagged_word);
     $class->add_prev($tagged_word,$prev_word) unless($i_sample==0);
@@ -130,7 +130,7 @@ sub tag{
     $new_tag="nn";
     my %classes = %{$class->{classes}};
     for my $tag (keys %classes){
-      my $tagged = $words[$word]."/".$tag;
+      my $tagged = $words[$word]."_".$tag;
       next unless($class->word_contained($tagged));
       my $prob_tagged = $class->{wtag_prob}{$tagged}; #prior
       my $likelihood = 1;
@@ -138,11 +138,11 @@ sub tag{
   #    print("[--] Word: ".$words[$word]." Prior: $prob_tagged\n");
       for my $otag (keys %classes){
         if($word > 0){
-          my $prev = $words[$word-1]."/".$otag;
+          my $prev = $words[$word-1]."_".$otag;
           $prev_prob = $class->{prev_wtag_prob}{$tagged}{$prev};
         }
         if($word < scalar(@words)-1){
-          my $next =$words[$word+1]."/".$otag;
+          my $next =$words[$word+1]."_".$otag;
           $next_prob = $class ->{next_wtag_prob}{$tagged}{$next};
         }
         $likelihood*=$prev_prob if(defined($prev_prob) and $prev_prob > 0);
