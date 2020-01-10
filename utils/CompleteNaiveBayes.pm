@@ -135,7 +135,7 @@ sub tag{
       my $prob_tagged = $class->{wtag_prob}{$tagged}; #prior
       my $likelihood = 1;
       my ($prev_prob,$next_prob) = (0,0);
-      print("[--] Word: ".$words[$word]." Prior: $prob_tagged\n");
+  #    print("[--] Word: ".$words[$word]." Prior: $prob_tagged\n");
       for my $otag (keys %classes){
         if($word > 0){
           my $prev = $words[$word-1]."/".$otag;

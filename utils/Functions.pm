@@ -8,6 +8,7 @@ sub read_samples{
   my $punc = shift;
   my @samples; # [Sample::(Word, Pos)]
   my $new_sample; #::Sample
+  my $firstlast = 0;
   my @words; #words list of word and PoS
   open(my $f_handler, '<:encoding(UTF-8)',$file) or die("[xx] Error: Could not open the file '$file'!");
   while($row = <$f_handler>){
@@ -18,7 +19,14 @@ sub read_samples{
       my @wordpos = split '/',$words[$i];
       #$words[$i] = lc $words[$i];
       #print("[".$wordpos[0]."|".$wordpos[1]."]"); #for (@wordpos);
-      $new_sample = new Sample(($wordpos[0]),$wordpos[1]);
+      if($i==0){
+        $firstlast=1;#"F";
+      } elsif($i==scalar(@words)-1){
+        $firstlast=-1;
+      } else{
+        $firstlast = 0;
+      }
+      $new_sample = new Sample(($wordpos[0]),$wordpos[1],$firstlast);
       push @samples,$new_sample;
     }
   }
@@ -40,6 +48,13 @@ sub tag_file{
   }
   close($f_hand);
   close($f_out) unless($f_out == STDOUT);
+}
+
+sub sum{
+  my @list = @_;
+  my $sum = 0;
+  $sum+=$_ for (@list);
+  return $sum;
 }
 
 
