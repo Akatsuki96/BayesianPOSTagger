@@ -127,7 +127,7 @@ sub tag{
   my @words = split ' ',$row;
   for my $word (0..scalar(@words)-1){
     $max_prob = 0;
-    $new_tag="nn";
+    $new_tag="NN";
     my %classes = %{$class->{classes}};
     for my $tag (keys %classes){
       my $tagged = $words[$word]."_".$tag;

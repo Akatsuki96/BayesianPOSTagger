@@ -7,11 +7,22 @@ use lib '../utils/';
 use Functions;
 use MCMC;
 
-my $mcmc = new MCMC(100,50);
+my $mcmc = new MCMC(1000,500);
 my @test_sample = Functions::read_samples("./brown_corpus");
 $mcmc->train(\@test_sample);
 print("[--] Training phase completed!\n");
-my @tagged = $mcmc->tag("Time flies like an arrow .",5);
-
+my @tagged = $mcmc->tag("Time flies like an arrow .",-1,1);
+print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
+print("\n");
+@tagged = $mcmc->tag("They work at the office .",5,1);
+print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
+print("\n");
+@tagged = $mcmc->tag("The work was done .");
+print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
+print("\n");
+@tagged = $mcmc->tag("The xxx is blue .",5,1);
+print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
+print("\n");
+@tagged = $mcmc->tag("The book was bought by Charles .",5,1);
 print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
 print("\n");

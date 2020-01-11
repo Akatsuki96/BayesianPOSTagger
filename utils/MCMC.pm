@@ -5,7 +5,7 @@ use Functions;
 use Switch;
 use Sampler;
 
-use constant SMALL_PROB => 9.22e-20;
+use constant SMALL_PROB => 4.22e-14;
 
 sub new{
   my ($class,$num_samples,$burn_in)=(shift,(shift or 100),(shift or 5));
@@ -126,7 +126,7 @@ sub train{
     $next_word = $samples[$i_sample+1]->get_word()."_".$samples[$i_sample+1]->get_pos() unless($i_sample== scalar(@samples)-1);
 
     $class->add_to("first_class",$samples[$i_sample]->get_pos()) if($samples[$i_sample]->is_first());
-    $class->add_word($tagged_word);
+    $class->add_to("words",$tagged_word);
     $class->add_prev($tagged_word,$prev_word) unless($i_sample==0);
     $class->add_next($tagged_word,$next_word) unless($i_sample==scalar(@samples)-1);
     $class->add_pos($samples[$i_sample]->get_pos());
@@ -147,42 +147,55 @@ sub train{
 
 sub generate_first_sampling{
   print("[--] Generating first sample...\n");
-  my ($class,$row) = (shift,shift);
+  my ($class,$row,$init) = (shift,shift,shift);
   my @tagged_words;
   my ($new_tag,$max_prob);
   chomp $row;
-  for my $word (split ' ',$row){
-    $max_prob = 0;
-    $new_tag="NN";
-    my %classes = %{$class->{classes}};
-    for my $tag (keys %classes){
-      my $tagged = $word."_".$tag;
-      next unless($class->word_contained($tagged));
-      my $prob_tagged = $class->{word_tag_prob}{$tagged}; #likelihood
-      my $tag_prob = $class->{tag_prob}{$tag}; #prior
-      my $post = $prob_tagged*$tag_prob;
-      if($post > $max_prob){
-        $new_tag = $tag;
-        $max_prob = $post;
+  if(defined($init)){
+    for my $word (split ' ',$row){
+      $max_prob = 0;
+      $new_tag="NN";
+      my %classes = %{$class->{classes}};
+      for my $tag (keys %classes){
+        my $tagged = $word."_".$tag;
+        next unless($class->word_contained($tagged));
+        my $prob_tagged = $class->{wtag_prob}{$tagged}; #likelihood
+        my $tag_prob = $class->{tag_prob}{$tag}; #prior
+        my $post = $prob_tagged*$tag_prob;
+      #  print("LIKELIHOOD: $prob_tagged PRIOR: $tag_prob POST: $post\n");
+        if($post > $max_prob){
+          $new_tag = $tag;
+          $max_prob = $post;
+        }
       }
+      push @tagged_words,new Sample($word,$new_tag);
     }
-    push @tagged_words,new Sample($word,$new_tag);
+  }else{
+    push @tagged_words,new Sample($_,"NN") for (split ' ',$row);
   }
   return @tagged_words;
 }
 
 sub tag{
-  my ($class,$sentence,$to_sample)=(shift,shift,(shift or 1));
-  my @tag_samples=$class->generate_first_sampling($sentence);
-  my @prev_sample = map {$_} @tag_samples;
-  my @last_sample;
+  my ($class,$sentence,$to_sample,$naiveinit)=(shift,shift,(shift or 1),shift);
+  print("[--] Sentence: $sentence\n");
+  my @tag_samples=$class->generate_first_sampling($sentence,$naiveinit);
+  print("[--] Initial Sample: ");
+  print ($_->get_word()."[".$_->get_pos()."] ") for (@tag_samples);
+  print("\n");
+  my @prev_sample = ();#map {$_} @tag_samples;
+  push @prev_sample,$_ for (@tag_samples);
+  my @last_sample = ();
   my @words = split ' ',$sentence;
+  my @tagged_words=();
   my @classes = keys %{$class->{classes}};
-  my %samples;
-  my %smap;
+  my %samples={};
+  my %smap={};
+  my %map_sample;
   for my $i (0..$class->{num_samples}){
-    print("[??] Generating sample number $i...\n");
-    @last_sample = @prev_sample;
+    #print("[??] Generating sample number $i...\n");
+    @last_sample = ();
+    push @last_sample,$_ for (@prev_sample);
     for my $j (0..scalar(@words)-1){
       my @tags= ();
       my @weights = ();
@@ -195,20 +208,14 @@ sub tag{
         }elsif($j==scalar(@words)-1){
           $prior = defined($class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()})?$class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()}:0;
         }else{
-        #  print("Transition: $tag -> ".$last_sample[$j-1]->get_pos()." Probability: ".$class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()}."\n");
-          print("Transition $tag <- ".$last_sample[$j-1]->get_pos()." P : ".(defined($class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()})?$class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()}:0)."\n");
-          print("Transition ".$last_sample[$j+1]->get_pos()." <- ".$tag." P : ".(defined($class->{class_trans_prob}{$last_sample[$j+1]->get_pos()."_".$tag})?$class->{class_trans_prob}{$last_sample[$j+1]->get_pos()."_".$tag}:0)."\n");
           $prior = (defined($class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()})?$class->{class_trans_prob}{$tag."_".$last_sample[$j-1]->get_pos()}:0)*
                    (defined($class->{class_trans_prob}{$last_sample[$j+1]->get_pos()."_".$tag})?$class->{class_trans_prob}{$last_sample[$j+1]->get_pos()."_".$tag}:0);
         }
         my $post = $prior * $wtag_p;
-        print("[--] Word: ".$words[$j]." Tag: $tag Prior: $prior WTAGP: $wtag_p Post: $post\n");
         $sum_weights+=$post;
         push @tags,$tag;
         push @weights,$post;
       }
-    #  next if($sum_weights == 0);
-      print("Words: ".$words[$j]." SumWeights: $sum_weights\n");
       if($sum_weights > 0){ # normalization
         $weights[$_]/=$sum_weights for(0..scalar(@weights)-1);
       }
@@ -229,8 +236,13 @@ sub tag{
     push @prev_sample,$_ for (@last_sample);
     $samples{$i} = [];
     push @{$samples{$i}},$_ for(@prev_sample);
-  #  if(defined($smap{}))
-    print("End sample $i\n");
+    for $sample_index (0..scalar(@prev_sample)-1){
+      if(defined($map_sample{$sample_index}{$prev_sample[$sample_index]->get_pos()})){
+        $map_sample{$sample_index}{$prev_sample[$sample_index]->get_pos()}+=1;
+      }else{
+        $map_sample{$sample_index}{$prev_sample[$sample_index]->get_pos()}=1;
+      }
+    }
   }
   shift @samples for (0..$class->{burn_in});
   if ($to_sample > 1){
@@ -257,10 +269,22 @@ sub tag{
       }
     }
     my @best_tags = split '_',$max_key;
-    for my $i (0..scalar(@words)-1){
-      push @tagged_words, new Sample($words[$i],$best_tags[$i]);
-    }
+    push @tagged_words, new Sample($words[$_],$best_tags[$_]) for (0..scalar(@words)-1);
+    @samples = ();
     return @tagged_words;
+  }elsif($to_sample < 0){
+    for my $im_smp (0..scalar(keys %map_sample)-1){ #0..n
+      my $highest=0;
+      my $mp_tag = '';
+      for $tag (keys %{$map_sample{$im_smp}}){ #tag in position $im_smp
+        print("[--] Pos: $im_smp Tag: $tag Count: ".$map_sample{$im_smp}{$tag}."\n");
+        if($highest < $map_sample{$im_smp}{$tag}){
+          $highest = $map_sample{$im_smp}{$tag};
+          $mp_tag = $tag;
+        }
+      }
+      push @tagged_words,new Sample($words[$im_smp],$mp_tag);
+    }
   }else{
     @tagged_words=@{$samples{int(rand(scalar(keys %samples)-1))}};
   }
