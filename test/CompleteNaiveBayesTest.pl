@@ -23,7 +23,7 @@ print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
 @tagged = $naive_bayes->tag("The xxx is blue .");
 print("\n");
 print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
-@tagged = $naive_bayes->tag("The book was bough by Charles .");
+@tagged = $naive_bayes->tag("The book was bought by Charles .");
 print("\n");
 print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
 print("\n");

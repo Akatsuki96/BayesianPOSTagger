@@ -25,7 +25,7 @@ sub add_to{
   }
 }
 
-sub update_model{
+sub compute_probability{
   my ($class,$model,$wtag,$tot) = (shift,shift,shift,shift);
   if($model){
     $class->{word_tag_prob}{$wtag}=$class->{words}{$wtag}/$tot;
@@ -43,8 +43,8 @@ sub train{
     $class->add_to("classes",$pos);
     $class->{num_classes}+=1;
   }
-  $class->update_model(1,$_,$class->{classes}{(split '_',$_)[1]}) for (keys %{$class->{words}});
-  $class->update_model(0,$_,$class->{num_classes}) for (keys %{$class->{classes}});
+  $class->compute_probability(1,$_,$class->{classes}{(split '_',$_)[1]}) for (keys %{$class->{words}});
+  $class->compute_probability(0,$_,$class->{num_classes}) for (keys %{$class->{classes}});
 }
 
 

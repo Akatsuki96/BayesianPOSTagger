@@ -91,7 +91,7 @@ sub get_tag_from_tagged{
   return $spl[1];
 }
 
-sub update_model{
+sub compute_probability{
   my ($class,$model,$wtag,$prevnext,$tot) = (shift,shift,shift,shift,shift);
   switch($model){
     case 1 {$class->{wtag_prob}{$wtag}=$class->{words}{$wtag}/$tot;}
@@ -135,13 +135,13 @@ sub train{
 
   }
   my $f_count = Functions::sum(values %{$class->{first_class}});
-  $class->update_model(1,$_,0,$class->{classes}{$class->get_tag_from_tagged($_)}) for (keys %{$class->{words}});
-  $class->update_model(4,$_,0,$f_count) for (keys %{$class->{first_class}});
+  $class->compute_probability(1,$_,0,$class->{classes}{$class->get_tag_from_tagged($_)}) for (keys %{$class->{words}});
+  $class->compute_probability(4,$_,0,$f_count) for (keys %{$class->{first_class}});
   for my $cl (keys %{$class->{class_transition}}){
     my @spl = split '_',$cl;
-    $class->update_model(5,$cl,0,$class->{classes}{$spl[1]});
+    $class->compute_probability(5,$cl,0,$class->{classes}{$spl[1]});
   }
-  $class->update_model(0,$_,0,$class->{num_classes}) for (keys %{$class->{classes}});
+  $class->compute_probability(0,$_,0,$class->{num_classes}) for (keys %{$class->{classes}});
 
 }
 
