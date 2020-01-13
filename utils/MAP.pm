@@ -7,7 +7,7 @@ use Switch;
 use Functions;
 use Sampler;
 
-use constant SMALL_PROB => 4.22316915059e-10;
+use constant SMALL_PROB => 5e-10;
 
 sub new{
   my $class = shift;

@@ -11,7 +11,6 @@ sub new{
   my $class = shift;
   my $self = bless {
     words => {},
-    tagged_words => {},
     prev_words => {}, # act -> prev
     next_words =>{}, # act -> next
     classes => {},
@@ -60,8 +59,12 @@ sub compute_probability{
   my ($class,$model,$wtag,$prevnext,$tot) = (shift,shift,shift,shift,shift);
   switch($model){
     case 1 {$class->{wtag_prob}{$wtag}=$class->{words}{$wtag}/$tot; }
-    case 2 {$class->{prev_wtag_prob}{$wtag}{$prevnext}=$class->{prev_words}{$wtag}{$prevnext}; }
-    case 3 {$class->{next_wtag_prob}{$wtag}{$prevnext}=$class->{next_words}{$wtag}{$prevnext}; }
+    case 2 {
+    #  print("DEFINED PREV!!!\n") if(defined($class->{prev_wtag_prob}{$wtag}{$prevnext}));
+      $class->{prev_wtag_prob}{$wtag}{$prevnext}=$class->{prev_words}{$wtag}{$prevnext}; }
+    case 3 {
+    #   print("DEFINED NEXT!!!\n") if(defined($class->{next_wtag_prob}{$wtag}{$prevnext}));
+      $class->{next_wtag_prob}{$wtag}{$prevnext}=$class->{next_words}{$wtag}{$prevnext}; }
     else { $class->{tag_prob}{$wtag}=$class->{classes}{$wtag}/$tot; }
   }
 }
@@ -82,12 +85,14 @@ sub train{
     $class->{num_classes}+=1;
   }
   $class->compute_probability(1,$_,0,$class->{classes}{(split '_',$_)[1]}) for (keys %{$class->{words}});
-  for my $w (keys %{$class->{words}}){
-    for my $p (keys %{$class->{prev_words}{$w}}){
-      $class->compute_probability(2,$w,$p,$class->{words}{$w});
+  for my $act (keys %{$class->{prev_words}}){
+    for my $prev (keys %{$class->{prev_words}{$act}}){
+      $class->compute_probability(2,$act,$prev,$class->{words}{$act});
     }
-    for my $n (keys %{$class->{next_words}{$w}}){
-      $class->compute_probability(3,$w,$n,$class->{words}{$w});
+  }
+  for my $act (keys %{$class->{next_words}}){
+    for my $prev (keys %{$class->{next_words}{$act}}){
+      $class->compute_probability(3,$act,$prev,$class->{words}{$act});
     }
   }
 }
@@ -117,6 +122,7 @@ sub tag{
           my $next =$words[$word+1]."_".$otag;
           $next_prob = $class ->{next_wtag_prob}{$tagged}{$next};
         }
+
         $likelihood*=$prev_prob if(defined($prev_prob) and $prev_prob > 0);
         $likelihood*=$next_prob if(defined($next_prob) and $next_prob > 0);
         ($prev_prob,$next_prob)=(0,0);

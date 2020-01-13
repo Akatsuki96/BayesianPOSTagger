@@ -6,8 +6,10 @@ use warnings;
 use lib '../utils/';
 use Functions;
 use MCMC;
+use Tester;
 
-my $mcmc = new MCMC(1000,500);
+my $mcmc = new MCMC(100,50);
+my $tester= new Tester($mcmc);
 my @test_sample = Functions::read_samples("./brown_corpus");
 $mcmc->train(\@test_sample);
 print("[--] Training phase completed!\n");
@@ -26,3 +28,4 @@ print("\n");
 @tagged = $mcmc->tag("The book was bought by Charles .",5,1);
 print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
 print("\n");
+$tester->test('./test_set',5,1);
