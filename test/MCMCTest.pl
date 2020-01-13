@@ -28,4 +28,4 @@ print("\n");
 @tagged = $mcmc->tag("The book was bought by Charles .",5,1);
 print($_->get_word()."[".$_->get_pos()."] ") for (@tagged);
 print("\n");
-$tester->test('./test_set',5,1);
+$tester->test('./test_set',10,1);

@@ -122,13 +122,8 @@ sub train{
   for my $i_sample (0..scalar(@samples)-1){
     my ($prev_word,$tagged_word,$next_word);
     $tagged_word = $samples[$i_sample]->get_word()."_".$samples[$i_sample]->get_pos();
-    $prev_word = $samples[$i_sample-1]->get_word()."_".$samples[$i_sample-1]->get_pos() unless($i_sample==0);
-    $next_word = $samples[$i_sample+1]->get_word()."_".$samples[$i_sample+1]->get_pos() unless($i_sample== scalar(@samples)-1);
-
     $class->add_to("first_class",$samples[$i_sample]->get_pos()) if($samples[$i_sample]->is_first());
     $class->add_to("words",$tagged_word);
-    $class->add_prev($tagged_word,$prev_word) unless($i_sample==0);
-    $class->add_next($tagged_word,$next_word) unless($i_sample==scalar(@samples)-1);
     $class->add_pos($samples[$i_sample]->get_pos());
     $class->add_to("class_transition",$samples[$i_sample]->get_pos()."_".$samples[$i_sample-1]->get_pos()) if($i_sample > 0);#if($i_sample < scalar(@samples)-1);
     $class->{num_classes}+=1;
@@ -223,7 +218,7 @@ sub tag{
       my $r = rand();
       for my $index (0..scalar(@weights)-1){
         $c_sum +=$weights[$index];
-        $weights = $c_sum;
+        $weights[$index] = $c_sum;
       }
       my $r_index = -1;
       for my $index (1..scalar(@weights)-1){
